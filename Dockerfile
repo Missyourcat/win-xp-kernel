@@ -12,7 +12,8 @@ RUN apt update && apt install -y \
     uuid-dev \
     libjsoncpp-dev \
     postgresql-client \
-    curl
+    curl \
+    libmariadb-dev
 
 RUN git clone https://github.com/drogonframework/drogon.git && \
     cd drogon && \
@@ -33,4 +34,4 @@ RUN mkdir build && \
     cmake .. && \
     make -j$(nproc)
 
-CMD ["./build/win-xp-kernel"]
+CMD ["./start.sh"]
