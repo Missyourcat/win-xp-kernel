@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Main Page</title>
+</head>
+<body>
+
+<h1>Welcome Main Page</h1>
+<p>This page shows database data after JWT login.</p>
+<div id="content">Loading...</div>
+<div id="error" style="color: red;"></div>
+
+<script>
+(async function() {
+    const token = localStorage.getItem("token");
+    if (!token) {
+        window.location.href = "/admin.html";
+        return;
+    }
+
+    try {
+        const res = await fetch("/api/test", {
+            headers: {
+                "Authorization": "Bearer " + token
+            }
+        });
+
+        if (res.status === 401) {
+            window.location.href = "/admin.html";
+            return;
+        }
+
+        const data = await res.json();
+        if (data.code !== 200) {
+            document.getElementById("content").innerText = "Failed to load data.";
+            document.getElementById("error").innerText = data.msg || "Unknown error";
+            return;
+        }
+
+        const users = data.data || [];
+        if (users.length === 0) {
+            document.getElementById("content").innerText = "No users found in database.";
+            return;
+        }
+
+        const list = document.createElement("ul");
+        users.forEach((username) => {
+            const li = document.createElement("li");
+            li.innerText = username;
+            list.appendChild(li);
+        });
+
+        const content = document.getElementById("content");
+        content.innerHTML = "";
+        content.appendChild(list);
+    } catch (e) {
+        document.getElementById("content").innerText = "Unable to load data.";
+        document.getElementById("error").innerText = "Network error.";
+    }
+})();
+</script>
+
+</body>
+</html>
