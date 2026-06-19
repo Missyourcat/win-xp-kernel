@@ -1,7 +1,27 @@
 #include "super_r1_LoginP.h"
-#include <iostream>
-// #include <memory>
-#include <openssl/sha.h>
+#include <iostream>      // std::cerr, std::cout 打印日志
+#include <sstream>       // std::stringstream 字符串拼接
+#include <iomanip>       // std::setw, std::setfill 格式化输出（补零）
+#include <openssl/sha.h> // SHA256 加密算法
+#include <jwt-cpp/jwt.h> // JWT 生成和验证
+#include "models/AdminUser.h"
+
+static std::string get_jwt_secret() {
+    auto secret = getenv("JWT_SECRET");
+    return secret ? secret : "your_secret_key_change_in_production";
+}
+
+static std::string generate_jwt(const std::string& username, const std::string& role) {
+    return jwt::create()
+        .set_issuer("admin")
+        .set_type("JWS")
+        .set_payload_claim("username", jwt::claim(username))
+        .set_payload_claim("role", jwt::claim(role))
+        .set_issued_at(std::chrono::system_clock::now())
+        .set_expires_at(std::chrono::system_clock::now() + std::chrono::hours(2))
+        .sign(jwt::algorithm::hs256{get_jwt_secret()});
+}
+
 std::string sha256(const std::string &str)
 {
     unsigned char hash[SHA256_DIGEST_LENGTH];
@@ -25,7 +45,7 @@ void LoginP::admin(
     std::function<void (const HttpResponsePtr &)> &&callback
 )const
 {
-    Json::Value  ret;
+    // Json::Value  ret;
     try
     {
         auto resp = HttpResponse::newFileResponse("../views/admin.html");
@@ -72,50 +92,97 @@ void LoginP::login(
         std::string username = (*json)["username"].asString();
         std::string password = (*json)["password"].asString();
         auto db = drogon::app().getDbClient();
-        db->execSqlAsync(
-            "SELECT id, username, password_hash, role FROM admin_user WHERE username=?",
-            [callback, password](const drogon::orm::Result &r)
-            {
+        
+        drogon::orm::Mapper<drogon_model::win_xp_db::AdminUser> mapper(db);
+        mapper.findOne(
+            drogon::orm::Criteria(
+                drogon_model::win_xp_db::AdminUser::Cols::_username,
+                drogon::orm::CompareOperator::EQ,
+                username
+            ),
+            [callback,password](drogon_model::win_xp_db::AdminUser user){
                 Json::Value ret;
-
-                if (r.empty())
-                {
-                    json_response(callback, 401 , "用户不存在");
-                    return;
-                }
-
-                auto row = r[0];
-
-                std::string db_hash = row["password_hash"].as<std::string>();
-                std::string role = row["role"].as<std::string>();
-
-                if (sha256(password) != db_hash)
-                {
+                std::string db_hash = user.getValueOfPasswordHash();
+                std::string role = user.getValueOfRole();
+                // 验证密码
+                if (sha256(password) != db_hash) {
                     json_response(callback, 403, "密码错误");
                     return;
                 }
-
-                // 登录成功
-                std::string token = drogon::utils::getUuid();
-
+                std::string token = generate_jwt(user.getValueOfUsername(), role);
+                 // 构建响应
                 ret["code"] = 200;
                 ret["msg"] = "login success";
                 ret["role"] = role;
                 ret["token"] = token;
-                std::cout << "a t:" << token <<"\n";
+                
                 auto resp = drogon::HttpResponse::newHttpJsonResponse(ret);
                 drogon::Cookie cookie("admin_token", token);
+                cookie.setHttpOnly(true);
+                cookie.setPath("/");
+                cookie.setMaxAge(7200);  // 2小时
                 resp->addCookie(std::move(cookie));
-
                 callback(resp);
             },
-            [callback](const drogon::orm::DrogonDbException &e)
-            {
-                Json::Value ret;
-                json_response(callback, 500, e.base().what());
-            },
-            username
+            [callback](const drogon::orm::DrogonDbException &e) {
+            // 判断是否是用户不存在
+            std::string errMsg = e.base().what();
+            if (errMsg.find("not found") != std::string::npos || 
+                errMsg.find("empty") != std::string::npos) {
+                json_response(callback, 401, "用户不存在");
+            } else {
+                json_response(callback, 500, "数据库错误: " + errMsg);
+            }
+        }
         );
+        // db->execSqlAsync(
+        //     "SELECT id, username, password_hash, role FROM admin_user WHERE username=?",
+        //     [callback, password, username](const drogon::orm::Result &r)
+        //     {
+        //         Json::Value ret;
+
+        //         if (r.empty())
+        //         {
+        //             json_response(callback, 401 , "用户不存在");
+        //             return;
+        //         }
+
+        //         auto row = r[0];
+
+        //         std::string db_hash = row["password_hash"].as<std::string>();
+        //         std::string role = row["role"].as<std::string>();
+
+        //         if (sha256(password) != db_hash)
+        //         {
+        //             json_response(callback, 403, "密码错误");
+        //             return;
+        //         }
+
+        //         // 登录成功
+        //         std::string token = generate_jwt(username, role);
+
+        //         ret["code"] = 200;
+        //         ret["msg"] = "login success";
+        //         ret["role"] = role;
+        //         ret["token"] = token;
+        //         // std::cout << "a t:" << token <<"\n";
+        //         auto resp = drogon::HttpResponse::newHttpJsonResponse(ret);
+        //         // 设置 Cookie（HttpOnly 更安全）
+        //         drogon::Cookie cookie("admin_token", token);
+        //         cookie.setHttpOnly(true);
+        //         cookie.setPath("/");
+        //         cookie.setMaxAge(7200);  // 2小时
+        //         resp->addCookie(std::move(cookie));
+
+        //         callback(resp);
+        //     },
+        //     [callback](const drogon::orm::DrogonDbException &e)
+        //     {
+
+        //         json_response(callback, 500, e.base().what());
+        //     },
+        //     username
+        // );
     }
     catch (const std::exception &e)
     {
