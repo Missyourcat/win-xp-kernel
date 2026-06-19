@@ -1,3 +1,7 @@
 build/
 models/*.json
 # config.json
+.env
+start.sh
+setup_env.sh
+tidb_ca.pem

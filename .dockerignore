@@ -1,0 +1,5 @@
+build/
+.git/
+.env
+start.sh
+setup_env.sh

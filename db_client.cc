@@ -1,7 +1,9 @@
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 #include "db_client.h"
 #include <dlfcn.h>
-#include <mysql/mysql.h>
+#include <mysql.h>
 #include <cstdlib>
 #include <iostream>
 
@@ -30,7 +32,7 @@ extern "C" int mysql_real_connect_start(MYSQL **ret, MYSQL *mysql,
 
     const char *caPath = std::getenv("DB_SSL_CA");
     if (!caPath)
-        caPath = "/etc/ssl/certs/ca-certificates.crt";
+        caPath = "/etc/secerts/tidb_ca.pem";
 
     my_bool enforce = 1;
     mysql_options(mysql, MYSQL_OPT_SSL_ENFORCE, &enforce);

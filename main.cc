@@ -10,7 +10,7 @@ int main()
     db::initTiDbConnection();
 
     drogon::app().addListener("0.0.0.0", 5555);
-    drogon::app().loadConfigFile("../config.json");
+    drogon::app().loadConfigFile("./config.json");
 
     const char *envHost = std::getenv("DB_HOST");
     const char *envPort = std::getenv("DB_PORT");

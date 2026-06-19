@@ -29,6 +29,15 @@ add_executable(${PROJECT_NAME} main.cc db_client.cc)
 #
 # and comment out the following lines
 find_package(Drogon CONFIG REQUIRED)
+
+find_path(MYSQL_INCLUDE_DIR mysql.h PATHS /usr/include/mysql /usr/include/mariadb /usr/local/include/mysql)
+if(MYSQL_INCLUDE_DIR)
+    target_include_directories(${PROJECT_NAME} PRIVATE ${MYSQL_INCLUDE_DIR})
+    message(STATUS "Found MySQL includes: ${MYSQL_INCLUDE_DIR}")
+else()
+    message(FATAL_ERROR "MySQL headers (mysql.h) not found")
+endif()
+
 target_link_libraries(${PROJECT_NAME} PRIVATE Drogon::Drogon dl)
 
 # ##############################################################################
