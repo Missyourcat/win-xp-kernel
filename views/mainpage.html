@@ -410,6 +410,7 @@ let currentColumns = [];
 let currentRows = [];
 let allRows = [];
 let currentPkColumn = '';
+let currentSkipInsert = [];
 let currentFormMode = 'add';
 let currentEditId = null;
 
@@ -445,6 +446,7 @@ function selectTable(table, itemElement) {
     currentRows = [];
     allRows = [];
     currentPkColumn = '';
+    currentSkipInsert = [];
     pageTitleEl.textContent = table.replaceAll('_', ' ');
     pageNoteEl.textContent = '右侧显示该表结构与数据，支持新增、修改、删除。';
     searchInput.value = '';
@@ -530,6 +532,7 @@ async function loadTableSchema(table) {
         currentColumns = result.columns || [];
         allRows = result.data || [];
         currentPkColumn = result.primaryKey || '';
+        currentSkipInsert = result.skipInsert || [];
         doSearch();
         clearStatus();
     } catch (error) {
@@ -615,6 +618,7 @@ function openCreateForm() {
 
     createFormFields.innerHTML = '';
     currentColumns.forEach(col => {
+        if (currentSkipInsert.includes(col)) return;
         const label = document.createElement('label');
         label.textContent = col;
         const input = document.createElement('input');
@@ -636,7 +640,10 @@ async function submitCreateForm() {
 
     const inputs = createFormFields.querySelectorAll('input');
     const payload = {};
-    inputs.forEach(inp => { payload[inp.name] = inp.value; });
+    inputs.forEach(inp => {
+        if (currentSkipInsert.includes(inp.name)) return;
+        payload[inp.name] = inp.value;
+    });
 
     try {
         const res = await fetch(`/super/r1/MainP/api/table/${currentTable}`, {

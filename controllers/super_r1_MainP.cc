@@ -381,6 +381,8 @@ void MainP::getTableSchema(
         [callback, db, tableName](const drogon::orm::Result &sr)
         {
             Json::Value columns(Json::arrayValue);
+            Json::Value autoIncrement(Json::arrayValue);
+            Json::Value defaultTs(Json::arrayValue);
             std::string pkCol;
 
             for (const auto &row : sr)
@@ -392,12 +394,34 @@ void MainP::getTableSchema(
                 if (!row["Key"].isNull() &&
                     row["Key"].as<std::string>() == "PRI")
                     pkCol = col;
+
+                if (!row["Extra"].isNull())
+                {
+                    std::string extra = row["Extra"].as<std::string>();
+                    std::transform(extra.begin(), extra.end(), extra.begin(), ::tolower);
+                    if (extra.find("auto_increment") != std::string::npos)
+                        autoIncrement.append(col);
+                }
+
+                if (!row["Default"].isNull())
+                {
+                    std::string def = row["Default"].as<std::string>();
+                    std::transform(def.begin(), def.end(), def.begin(), ::tolower);
+                    if (def.find("current_timestamp") != std::string::npos)
+                        defaultTs.append(col);
+                }
             }
+
+            Json::Value skipInsert(Json::arrayValue);
+            for (const auto &col : autoIncrement)
+                skipInsert.append(col.asString());
+            for (const auto &col : defaultTs)
+                skipInsert.append(col.asString());
 
             std::string dataSql = "SELECT * FROM " + tableName + " LIMIT 200";
             db->execSqlAsync(
                 dataSql,
-                [callback, columns, pkCol](const drogon::orm::Result &dr)
+                [callback, columns, pkCol, skipInsert](const drogon::orm::Result &dr)
                 {
                     Json::Value ret;
                     Json::Value data(Json::arrayValue);
@@ -416,6 +440,7 @@ void MainP::getTableSchema(
                     ret["code"] = 200;
                     ret["columns"] = columns;
                     ret["primaryKey"] = pkCol;
+                    ret["skipInsert"] = skipInsert;
                     ret["data"] = data;
                     callback(HttpResponse::newHttpJsonResponse(ret));
                 },
