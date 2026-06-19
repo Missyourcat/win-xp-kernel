@@ -144,10 +144,27 @@ body {
     color: #334155;
 }
 
-.actions {
+.search-bar {
     display: flex;
     gap: 8px;
-    flex-wrap: wrap;
+    align-items: center;
+}
+
+.search-bar input {
+    width: 260px;
+    min-height: 38px;
+    padding: 8px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    outline: none;
+    font-size: 14px;
+    color: #0f172a;
+    background: white;
+}
+
+.search-bar input:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37,99,235,0.15);
 }
 
 button,
@@ -281,10 +298,6 @@ textarea { min-height: 90px; }
                 <h2 id="pageTitle">请选择左侧数据库表</h2>
                 <div class="page-note" id="pageNote">主页面通过 King 接口获取当前用户信息和可访问表。</div>
             </div>
-            <div class="actions">
-                <button class="primary hidden" id="refreshBtn">刷新</button>
-                <button class="success hidden" id="addRowBtn">新增记录</button>
-            </div>
         </div>
 
         <div id="tableArea" class="card hidden">
@@ -293,9 +306,9 @@ textarea { min-height: 90px; }
                     <div class="subtitle" id="tableLabel"></div>
                     <div id="tableInfo"></div>
                 </div>
-                <div class="actions">
-                    <button class="primary" id="refreshBtn2">刷新</button>
-                    <button class="success" id="addRowBtn2">新增记录</button>
+                <div class="search-bar">
+                    <input type="text" id="searchInput" placeholder="输入关键词搜索...">
+                    <button class="primary" id="searchBtn">搜索</button>
                 </div>
             </div>
             <div id="tableContainer" class="table-wrap"></div>
@@ -328,14 +341,15 @@ const formAreaEl = document.getElementById('formArea');
 const dataFormEl = document.getElementById('dataForm');
 const formModeTitleEl = document.getElementById('formModeTitle');
 const statusMessageEl = document.getElementById('statusMessage');
-const refreshBtns = [document.getElementById('refreshBtn'), document.getElementById('refreshBtn2')];
-const addButtons = [document.getElementById('addRowBtn'), document.getElementById('addRowBtn2')];
+const searchInput = document.getElementById('searchInput');
+const searchBtn = document.getElementById('searchBtn');
 const closeFormBtn = document.getElementById('closeFormBtn');
 const saveFormBtn = document.getElementById('saveFormBtn');
 
 let currentTable = null;
 let currentColumns = [];
 let currentRows = [];
+let allRows = [];
 let currentPkColumn = '';
 let currentFormMode = 'add';
 let currentEditId = null;
@@ -370,16 +384,16 @@ function selectTable(table, itemElement) {
     currentFormMode = 'add';
     currentColumns = [];
     currentRows = [];
+    allRows = [];
     currentPkColumn = '';
     pageTitleEl.textContent = table.replaceAll('_', ' ');
     pageNoteEl.textContent = '右侧显示该表结构与数据，支持新增、修改、删除。';
+    searchInput.value = '';
 
     document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
     itemElement.classList.add('active');
 
     tableAreaEl.classList.remove('hidden');
-    refreshBtns.forEach(btn => btn.classList.remove('hidden'));
-    addButtons.forEach(btn => btn.classList.remove('hidden'));
     clearStatus();
     hideForm();
     loadTableSchema(table);
@@ -418,6 +432,23 @@ async function initPage() {
     }
 }
 
+function doSearch() {
+    const keyword = searchInput.value.trim().toLowerCase();
+    if (!keyword) {
+        currentRows = allRows.slice();
+    } else {
+        currentRows = allRows.filter(row =>
+            currentColumns.some(col => {
+                const val = row[col];
+                return val != null && String(val).toLowerCase().includes(keyword);
+            })
+        );
+    }
+    tableInfoEl.textContent = `共 ${allRows.length} 条记录` +
+        (keyword ? `，搜索命中 ${currentRows.length} 条` : '');
+    renderTable(currentColumns, currentRows);
+}
+
 async function loadTableSchema(table) {
     tableLabelEl.textContent = '表名：' + table;
     tableInfoEl.textContent = '正在加载...';
@@ -436,10 +467,9 @@ async function loadTableSchema(table) {
         }
 
         currentColumns = result.columns || [];
-        currentRows = result.data || [];
+        allRows = result.data || [];
         currentPkColumn = result.primaryKey || '';
-        tableInfoEl.textContent = `共 ${currentRows.length} 条记录`;
-        renderTable(currentColumns, currentRows);
+        doSearch();
         clearStatus();
     } catch (error) {
         console.error(error);
@@ -477,7 +507,7 @@ function renderTable(columns, rows) {
         const emptyCell = document.createElement('td');
         emptyCell.colSpan = columns.length + 1;
         emptyCell.className = 'empty-state';
-        emptyCell.textContent = '暂无记录，您可以点击"新增记录"添加数据。';
+        emptyCell.textContent = '暂无记录。';
         emptyRow.appendChild(emptyCell);
         tbody.appendChild(emptyRow);
     } else {
@@ -644,10 +674,8 @@ async function deleteRow(row) {
     }
 }
 
-refreshBtns.forEach(btn => btn.addEventListener('click', () => {
-    if (currentTable) loadTableSchema(currentTable);
-}));
-addButtons.forEach(btn => btn.addEventListener('click', openAddRowForm));
+searchBtn.addEventListener('click', doSearch);
+searchInput.addEventListener('keyup', e => { if (e.key === 'Enter') doSearch(); });
 closeFormBtn.addEventListener('click', hideForm);
 saveFormBtn.addEventListener('click', submitForm);
 
