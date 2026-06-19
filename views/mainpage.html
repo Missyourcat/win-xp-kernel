@@ -1,64 +1,657 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh">
 <head>
-    <meta charset="UTF-8">
-    <title>Main Page</title>
+<meta charset="UTF-8">
+<title>Admin Panel</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Segoe UI", Arial, sans-serif;
+}
+
+body {
+    display: flex;
+    min-height: 100vh;
+    background: #f4f6f9;
+}
+
+#sidebar {
+    width: 260px;
+    background: #111827;
+    color: #cbd5e1;
+    padding: 16px;
+    overflow-y: auto;
+}
+
+.logo {
+    font-size: 18px;
+    font-weight: bold;
+    color: white;
+    margin-bottom: 20px;
+    padding: 10px;
+}
+
+.group-title {
+    font-size: 12px;
+    color: #64748b;
+    margin: 18px 10px 8px;
+    text-transform: uppercase;
+}
+
+.menu-item {
+    padding: 10px 12px;
+    margin: 6px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #cbd5e1;
+}
+
+.menu-item.active,
+.menu-item:hover {
+    background: #1f2937;
+    color: white;
+    transform: translateX(3px);
+}
+
+#container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+#topbar {
+    height: 56px;
+    background: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+    border-bottom: 1px solid #e5e7eb;
+    gap: 10px;
+}
+
+.topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.badge {
+    background: #2563eb;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+}
+
+.user {
+    font-size: 14px;
+    color: #111827;
+}
+
+#main {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-height: calc(100vh - 56px);
+}
+
+.card {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.page-header h2 {
+    font-size: 20px;
+    color: #111827;
+}
+
+.page-note {
+    margin-top: 8px;
+    color: #475569;
+    font-size: 14px;
+}
+
+.table-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.table-meta .subtitle {
+    font-size: 14px;
+    color: #334155;
+}
+
+.actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+button,
+button.primary,
+button.success,
+button.warning,
+button.danger {
+    border: none;
+    border-radius: 8px;
+    padding: 8px 14px;
+    cursor: pointer;
+    transition: background 0.2s;
+    font-size: 13px;
+}
+
+button.primary { background: #2563eb; color: white; }
+button.success { background: #16a34a; color: white; }
+button.warning { background: #f59e0b; color: white; }
+button.danger { background: #dc2626; color: white; }
+
+button:hover { opacity: 0.92; }
+
+.table-wrap {
+    overflow-x: auto;
+    margin-top: 20px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th, td {
+    border: 1px solid #e2e8f0;
+    padding: 12px 10px;
+    text-align: left;
+    font-size: 13px;
+    color: #334155;
+}
+
+th {
+    background: #f8fafc;
+}
+
+.row-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+#formArea {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 20px;
+    display: none;
+}
+
+#formArea.active {
+    display: block;
+}
+
+.form-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+}
+
+.form-grid label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    color: #334155;
+    font-size: 13px;
+}
+
+input, textarea {
+    width: 100%;
+    min-height: 38px;
+    padding: 10px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    outline: none;
+    font-size: 14px;
+    color: #0f172a;
+    background: white;
+}
+
+textarea { min-height: 90px; }
+
+#statusMessage {
+    margin-top: 10px;
+    min-height: 20px;
+    font-size: 13px;
+}
+
+.hidden { display: none !important; }
+
+.empty-state {
+    color: #64748b;
+    padding: 20px 0;
+}
+</style>
 </head>
+
 <body>
 
-<h1>Welcome Main Page</h1>
-<p>This page shows database data after JWT login.</p>
-<div id="content">Loading...</div>
-<div id="error" style="color: red;"></div>
+<div id="sidebar">
+    <div class="logo">⚙ Admin Panel</div>
+</div>
+
+<div id="container">
+    <div id="topbar">
+        <div class="topbar-left">
+            <div class="user" id="username"></div>
+            <div class="badge" id="role"></div>
+        </div>
+    </div>
+
+    <div id="main">
+        <div class="card page-header">
+            <div>
+                <h2 id="pageTitle">请选择左侧数据库表</h2>
+                <div class="page-note" id="pageNote">主页面通过 King 接口获取当前用户信息和可访问表。</div>
+            </div>
+            <div class="actions">
+                <button class="primary hidden" id="refreshBtn">刷新</button>
+                <button class="success hidden" id="addRowBtn">新增记录</button>
+            </div>
+        </div>
+
+        <div id="tableArea" class="card hidden">
+            <div class="table-meta">
+                <div>
+                    <div class="subtitle" id="tableLabel"></div>
+                    <div id="tableInfo"></div>
+                </div>
+                <div class="actions">
+                    <button class="primary" id="refreshBtn2">刷新</button>
+                    <button class="success" id="addRowBtn2">新增记录</button>
+                </div>
+            </div>
+            <div id="tableContainer" class="table-wrap"></div>
+            <div id="formArea">
+                <div class="form-header">
+                    <strong id="formModeTitle"></strong>
+                    <button class="danger" id="closeFormBtn" type="button">关闭</button>
+                </div>
+                <form id="dataForm"></form>
+                <div class="row-actions" style="justify-content:flex-end; margin-top:14px;">
+                    <button class="primary" id="saveFormBtn" type="button">保存</button>
+                </div>
+                <div id="statusMessage"></div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>
-(async function() {
-    const token = localStorage.getItem("token");
-    if (!token) {
-        window.location.href = "/admin.html";
-        return;
-    }
+const sidebarEl = document.getElementById('sidebar');
+const usernameEl = document.getElementById('username');
+const roleEl = document.getElementById('role');
+const pageTitleEl = document.getElementById('pageTitle');
+const pageNoteEl = document.getElementById('pageNote');
+const tableAreaEl = document.getElementById('tableArea');
+const tableLabelEl = document.getElementById('tableLabel');
+const tableInfoEl = document.getElementById('tableInfo');
+const tableContainerEl = document.getElementById('tableContainer');
+const formAreaEl = document.getElementById('formArea');
+const dataFormEl = document.getElementById('dataForm');
+const formModeTitleEl = document.getElementById('formModeTitle');
+const statusMessageEl = document.getElementById('statusMessage');
+const refreshBtns = [document.getElementById('refreshBtn'), document.getElementById('refreshBtn2')];
+const addButtons = [document.getElementById('addRowBtn'), document.getElementById('addRowBtn2')];
+const closeFormBtn = document.getElementById('closeFormBtn');
+const saveFormBtn = document.getElementById('saveFormBtn');
 
+let currentTable = null;
+let currentColumns = [];
+let currentRows = [];
+let currentPkColumn = '';
+let currentFormMode = 'add';
+let currentEditId = null;
+
+function showStatus(message, success = true) {
+    statusMessageEl.textContent = message;
+    statusMessageEl.style.color = success ? '#166534' : '#b91c1c';
+}
+
+function clearStatus() {
+    statusMessageEl.textContent = '';
+}
+
+function setSidebarTables(tables) {
+    const databaseGroup = document.createElement('div');
+    databaseGroup.className = 'group-title';
+    databaseGroup.textContent = 'DATABASE';
+    sidebarEl.appendChild(databaseGroup);
+
+    tables.forEach(table => {
+        const item = document.createElement('div');
+        item.className = 'menu-item';
+        item.textContent = '▸ ' + table.replaceAll('_', ' ');
+        item.onclick = () => selectTable(table, item);
+        sidebarEl.appendChild(item);
+    });
+}
+
+function selectTable(table, itemElement) {
+    currentTable = table;
+    currentEditId = null;
+    currentFormMode = 'add';
+    currentColumns = [];
+    currentRows = [];
+    currentPkColumn = '';
+    pageTitleEl.textContent = table.replaceAll('_', ' ');
+    pageNoteEl.textContent = '右侧显示该表结构与数据，支持新增、修改、删除。';
+
+    document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+    itemElement.classList.add('active');
+
+    tableAreaEl.classList.remove('hidden');
+    refreshBtns.forEach(btn => btn.classList.remove('hidden'));
+    addButtons.forEach(btn => btn.classList.remove('hidden'));
+    clearStatus();
+    hideForm();
+    loadTableSchema(table);
+}
+
+function hideForm() {
+    formAreaEl.classList.remove('active');
+    dataFormEl.innerHTML = '';
+    formModeTitleEl.textContent = '';
+    currentEditId = null;
+}
+
+async function initPage() {
     try {
-        const res = await fetch("/api/test", {
-            headers: {
-                "Authorization": "Bearer " + token
-            }
+        const res = await fetch('/super/r1/MainP/king?json=1', {
+            headers: { 'Accept': 'application/json' },
+            credentials: 'include'
         });
 
-        if (res.status === 401) {
-            window.location.href = "/admin.html";
+        if (!res.ok || !res.headers.get('content-type')?.includes('application/json')) {
+            window.location.href = '/super/r1/LoginP/admin_in';
             return;
         }
 
         const data = await res.json();
-        if (data.code !== 200) {
-            document.getElementById("content").innerText = "Failed to load data.";
-            document.getElementById("error").innerText = data.msg || "Unknown error";
-            return;
+        usernameEl.textContent = 'User: ' + (data.curr_user || '未知');
+        roleEl.textContent = data.curr_role || '未知';
+        setSidebarTables(Array.isArray(data.tables) ? data.tables : []);
+
+        if (!Array.isArray(data.tables) || data.tables.length === 0) {
+            pageNoteEl.textContent = '没有可访问的数据库表。';
         }
-
-        const users = data.data || [];
-        if (users.length === 0) {
-            document.getElementById("content").innerText = "No users found in database.";
-            return;
-        }
-
-        const list = document.createElement("ul");
-        users.forEach((username) => {
-            const li = document.createElement("li");
-            li.innerText = username;
-            list.appendChild(li);
-        });
-
-        const content = document.getElementById("content");
-        content.innerHTML = "";
-        content.appendChild(list);
-    } catch (e) {
-        document.getElementById("content").innerText = "Unable to load data.";
-        document.getElementById("error").innerText = "Network error.";
+    } catch (error) {
+        console.error(error);
+        showStatus('加载失败，请刷新页面。', false);
     }
-})();
+}
+
+async function loadTableSchema(table) {
+    tableLabelEl.textContent = '表名：' + table;
+    tableInfoEl.textContent = '正在加载...';
+    tableContainerEl.innerHTML = '';
+
+    try {
+        const res = await fetch(`/super/r1/MainP/api/table/${table}/schema`, {
+            credentials: 'include'
+        });
+        const result = await res.json();
+
+        if (result.code !== 200) {
+            tableInfoEl.textContent = '加载失败：' + (result.msg || '未知错误');
+            showStatus(result.msg || '获取表结构失败', false);
+            return;
+        }
+
+        currentColumns = result.columns || [];
+        currentRows = result.data || [];
+        currentPkColumn = result.primaryKey || '';
+        tableInfoEl.textContent = `共 ${currentRows.length} 条记录`;
+        renderTable(currentColumns, currentRows);
+        clearStatus();
+    } catch (error) {
+        console.error(error);
+        tableInfoEl.textContent = '加载失败，请检查网络。';
+        showStatus('获取表数据失败', false);
+    }
+}
+
+function renderTable(columns, rows) {
+    if (!columns.length) {
+        tableContainerEl.innerHTML = '<div class="empty-state">该数据库表没有字段或无需展示字段。</div>';
+        return;
+    }
+
+    const table = document.createElement('table');
+    const thead = document.createElement('thead');
+    const headRow = document.createElement('tr');
+
+    columns.forEach(col => {
+        const th = document.createElement('th');
+        th.textContent = col;
+        headRow.appendChild(th);
+    });
+
+    const actionTh = document.createElement('th');
+    actionTh.textContent = '操作';
+    headRow.appendChild(actionTh);
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+
+    if (rows.length === 0) {
+        const emptyRow = document.createElement('tr');
+        const emptyCell = document.createElement('td');
+        emptyCell.colSpan = columns.length + 1;
+        emptyCell.className = 'empty-state';
+        emptyCell.textContent = '暂无记录，您可以点击"新增记录"添加数据。';
+        emptyRow.appendChild(emptyCell);
+        tbody.appendChild(emptyRow);
+    } else {
+        rows.forEach(row => {
+            const tr = document.createElement('tr');
+            columns.forEach(col => {
+                const td = document.createElement('td');
+                td.textContent = row[col] === null || row[col] === undefined
+                    ? 'NULL' : String(row[col]);
+                tr.appendChild(td);
+            });
+            const actionTd = document.createElement('td');
+            actionTd.className = 'row-actions';
+            const editBtn = document.createElement('button');
+            editBtn.className = 'primary';
+            editBtn.textContent = '编辑';
+            editBtn.onclick = () => openEditForm(row);
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'danger';
+            deleteBtn.textContent = '删除';
+            deleteBtn.onclick = () => deleteRow(row);
+            actionTd.appendChild(editBtn);
+            actionTd.appendChild(deleteBtn);
+            tr.appendChild(actionTd);
+            tbody.appendChild(tr);
+        });
+    }
+
+    table.appendChild(tbody);
+    tableContainerEl.innerHTML = '';
+    tableContainerEl.appendChild(table);
+}
+
+function openAddRowForm() {
+    if (!currentTable || !currentColumns.length) {
+        showStatus('请先选择一个表并加载结构。', false);
+        return;
+    }
+    currentFormMode = 'add';
+    currentEditId = null;
+    renderForm({});
+}
+
+function openEditForm(row) {
+    if (!currentTable || !currentColumns.length) {
+        showStatus('请先选择一个表并加载结构。', false);
+        return;
+    }
+    currentFormMode = 'edit';
+    currentEditId = currentPkColumn ? row[currentPkColumn] : null;
+    if (!currentEditId && currentEditId !== 0) {
+        showStatus('无法确定主键值，请检查表结构。', false);
+        return;
+    }
+    renderForm(row);
+}
+
+function renderForm(rowData) {
+    dataFormEl.innerHTML = '';
+    formModeTitleEl.textContent = currentFormMode === 'edit' ? '修改记录' : '新增记录';
+    formAreaEl.classList.add('active');
+
+    const grid = document.createElement('div');
+    grid.className = 'form-grid';
+
+    currentColumns.forEach(column => {
+        const label = document.createElement('label');
+        label.textContent = column;
+        const input = document.createElement('input');
+        input.name = column;
+        input.value = (rowData[column] == null) ? '' : String(rowData[column]);
+
+        if (currentFormMode === 'edit' && column === currentPkColumn) {
+            input.readOnly = true;
+            input.style.background = '#f1f5f9';
+        }
+
+        label.appendChild(input);
+        grid.appendChild(label);
+    });
+
+    dataFormEl.appendChild(grid);
+    showStatus('请填写表单，然后点击保存。');
+}
+
+async function submitForm() {
+    if (!currentTable) {
+        showStatus('当前没有选中的表。', false);
+        return;
+    }
+
+    const formData = new FormData(dataFormEl);
+    const payload = {};
+    for (const [key, value] of formData.entries()) {
+        payload[key] = value;
+    }
+
+    try {
+        let result;
+        if (currentFormMode === 'edit') {
+            if (!currentEditId && currentEditId !== 0) {
+                showStatus('缺少记录 id，无法更新。', false);
+                return;
+            }
+            const res = await fetch(
+                `/super/r1/MainP/api/table/${currentTable}/${encodeURIComponent(currentEditId)}`,
+                {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(payload)
+                });
+            result = await res.json();
+        } else {
+            const res = await fetch(`/super/r1/MainP/api/table/${currentTable}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify(payload)
+            });
+            result = await res.json();
+        }
+
+        if (result.code === 200) {
+            showStatus(currentFormMode === 'edit' ? '更新成功' : '新增成功');
+            hideForm();
+            loadTableSchema(currentTable);
+        } else {
+            showStatus(result.msg || '操作失败', false);
+        }
+    } catch (error) {
+        console.error(error);
+        showStatus('操作失败，请重试。', false);
+    }
+}
+
+async function deleteRow(row) {
+    const pkValue = currentPkColumn ? row[currentPkColumn] : null;
+    if (pkValue === null || pkValue === undefined) {
+        showStatus('无法找到记录主键，删除失败。', false);
+        return;
+    }
+    if (!window.confirm('确认删除当前记录？')) {
+        return;
+    }
+
+    try {
+        const res = await fetch(
+            `/super/r1/MainP/api/table/${currentTable}/${encodeURIComponent(pkValue)}`,
+            {
+                method: 'DELETE',
+                credentials: 'include'
+            });
+        const result = await res.json();
+        if (result.code === 200) {
+            showStatus('删除成功');
+            loadTableSchema(currentTable);
+        } else {
+            showStatus(result.msg || '删除失败', false);
+        }
+    } catch (error) {
+        console.error(error);
+        showStatus('删除请求失败。', false);
+    }
+}
+
+refreshBtns.forEach(btn => btn.addEventListener('click', () => {
+    if (currentTable) loadTableSchema(currentTable);
+}));
+addButtons.forEach(btn => btn.addEventListener('click', openAddRowForm));
+closeFormBtn.addEventListener('click', hideForm);
+saveFormBtn.addEventListener('click', submitForm);
+
+initPage();
 </script>
 
 </body>
