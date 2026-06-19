@@ -61,8 +61,8 @@ COPY --from=builder /usr/lib /usr/lib
 RUN ldconfig
 
 # CA cert (Render mounts secrets at /etc/secrets/)
-RUN mkdir -p /etc/secrets
-COPY tidb_ca.pem /etc/secrets/tidb_ca.pem
+# RUN mkdir -p /etc/secrets
+# COPY tidb_ca.pem /etc/secrets/tidb_ca.pem
 
 WORKDIR /app
 EXPOSE 5555
