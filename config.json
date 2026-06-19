@@ -62,21 +62,7 @@
             "timeout": -1.0
         }
     ],*/
-    "db_clients": [
-        {
-            "name": "default",
-            "rdbms": "mysql",
-            "host": "gateway01.us-west-2.prod.aws.tidbcloud.com",
-            "port": 4000,
-            "dbname": "win_xp_db",
-            "user": "211PmWMM6U5FfUi.root",
-            "passwd": "ic0XECEBJVoYDR1F",
-            "is_fast": false,
-            "number_of_connections": 1,
-            "timeout": -1.0,
-            "auto_batch": false
-        }
-    ],
+    "db_clients": [],
     "app": {
         //number_of_threads: The number of IO threads, 1 by default, if the value is set to 0, the number of threads
         //is the number of CPU cores

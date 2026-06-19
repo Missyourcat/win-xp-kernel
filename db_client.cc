@@ -28,10 +28,13 @@ extern "C" int mysql_real_connect_start(MYSQL **ret, MYSQL *mysql,
         }
     }
 
+    const char *caPath = std::getenv("DB_SSL_CA");
+    if (!caPath)
+        caPath = "/etc/ssl/certs/ca-certificates.crt";
+
     my_bool enforce = 1;
     mysql_options(mysql, MYSQL_OPT_SSL_ENFORCE, &enforce);
-    mysql_options(mysql, MYSQL_OPT_SSL_CA,
-                  "/home/Ha/Documents/win_xp_kernel/certs/isrgrootx1.pem");
+    mysql_options(mysql, MYSQL_OPT_SSL_CA, caPath);
 
     return real_func(ret, mysql, host, user, passwd, db, port,
                      unix_socket, clientflag);
