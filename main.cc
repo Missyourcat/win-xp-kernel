@@ -9,7 +9,12 @@ int main()
 {
     db::initTiDbConnection();
 
-    drogon::app().addListener("0.0.0.0", 5555);
+    const char *envListenPort = std::getenv("PORT");
+    unsigned short listenPort = envListenPort
+        ? static_cast<unsigned short>(std::stoul(envListenPort))
+        : 5555;
+    std::cout << "[config] Listening on port " << listenPort << std::endl;
+    drogon::app().addListener("0.0.0.0", listenPort);
     drogon::app().loadConfigFile("./config.json");
 
     const char *envHost = std::getenv("DB_HOST");

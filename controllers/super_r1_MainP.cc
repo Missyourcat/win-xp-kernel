@@ -6,6 +6,7 @@
 #include <jwt-cpp/jwt.h>
 #include <algorithm>
 #include <cctype>
+#include <string>
 #include <sstream>
 #include <vector>
 
@@ -116,7 +117,9 @@ void MainP::King(
             return;
         }
 
-        auto resp = HttpResponse::newFileResponse("../views/mainpage.html");
+        const char *vd = getenv("VIEWS_DIR");
+        std::string viewsDir = vd ? vd : "../views";
+        auto resp = HttpResponse::newFileResponse(viewsDir + "/mainpage.html");
         callback(resp);
     }
     catch (const std::exception &)

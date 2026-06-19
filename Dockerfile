@@ -65,6 +65,7 @@ RUN ldconfig
 # COPY tidb_ca.pem /etc/secrets/tidb_ca.pem
 
 WORKDIR /app
+ENV VIEWS_DIR=./views
 EXPOSE 5555
 
 CMD ["./win-xp-kernel"]

@@ -48,7 +48,9 @@ void LoginP::admin(
     // Json::Value  ret;
     try
     {
-        auto resp = HttpResponse::newFileResponse("../views/admin.html");
+        const char *vd = getenv("VIEWS_DIR");
+        std::string viewsDir = vd ? vd : "../views";
+        auto resp = HttpResponse::newFileResponse(viewsDir + "/admin.html");
         callback(resp);
     }
     catch(const std::exception& e)
