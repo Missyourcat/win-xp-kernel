@@ -6,9 +6,7 @@
 #include <openssl/sha.h>
 #include <jwt-cpp/jwt.h>
 #include <sys/utsname.h>
-#include <ifaddrs.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
+
 #include "models/WinUser.h"
 #include "models/DesktopIcon.h"
 #include "models/Category.h"
@@ -467,30 +465,14 @@ void api::getSystemInfo(
             }
         }
 
-        struct ifaddrs *ifaddr, *ifa;
-        if (getifaddrs(&ifaddr) == 0)
+        std::string clientIp = req->getPeerAddr().toIp();
+        auto forwarded = req->getHeader("X-Forwarded-For");
+        if (!forwarded.empty())
         {
-            Json::Value ipList(Json::arrayValue);
-            for (ifa = ifaddr; ifa != nullptr; ifa = ifa->ifa_next)
-            {
-                if (!ifa->ifa_addr || ifa->ifa_addr->sa_family != AF_INET)
-                    continue;
-                char ip[INET_ADDRSTRLEN];
-                auto sin = (struct sockaddr_in*)ifa->ifa_addr;
-                inet_ntop(AF_INET, &sin->sin_addr, ip, sizeof(ip));
-                if (std::string(ip) != "127.0.0.1")
-                {
-                    Json::Value iface;
-                    iface["name"] = ifa->ifa_name;
-                    iface["ip"] = ip;
-                    ipList.append(iface);
-                }
-            }
-            freeifaddrs(ifaddr);
-            data["ip_addresses"] = ipList;
+            auto comma = forwarded.find(',');
+            clientIp = forwarded.substr(0, comma);
         }
-
-        data["client_ip"] = req->getPeerAddr().toIp();
+        data["client_ip"] = clientIp;
 
         Json::Value extra;
         extra["data"] = data;
