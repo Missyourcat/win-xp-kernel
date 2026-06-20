@@ -55,6 +55,7 @@ RUN apt update && apt install -y \
 # Copy built binary and config (shared libs come from builder)
 COPY --from=builder /app/build/win-xp-kernel /app/win-xp-kernel
 COPY --from=builder /app/views /app/views
+COPY --from=builder /app/files /app/files
 COPY --from=builder /app/config.json /app/config.json
 COPY --from=builder /usr/local/lib /usr/local/lib
 COPY --from=builder /usr/lib /usr/lib
@@ -66,6 +67,7 @@ RUN ldconfig
 
 WORKDIR /app
 ENV VIEWS_DIR=./views
+ENV FILES_DIR=./files
 EXPOSE 5555
 
 CMD ["./win-xp-kernel"]

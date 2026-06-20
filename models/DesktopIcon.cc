@@ -24,7 +24,7 @@ const std::string DesktopIcon::tableName = "desktop_icon";
 const std::vector<typename DesktopIcon::MetaData> DesktopIcon::metaData_={
 {"desktop_id","int32_t","int(11)",4,1,1,1},
 {"desktop_name","std::string","varchar(64)",64,0,0,1},
-{"desktop_image","std::string","varchar(256)",256,0,0,0},
+{"desktop_image","std::string","mediumtext",0,0,0,0},
 {"desktop_url","std::string","varchar(64)",64,0,0,1}
 };
 const std::string &DesktopIcon::getColumnName(size_t index) noexcept(false)
@@ -788,14 +788,6 @@ bool DesktopIcon::validJsonOfField(size_t index,
             if(!pJson.isString())
             {
                 err="Type error in the "+fieldName+" field";
-                return false;
-            }
-            if(pJson.isString() && std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t>{}
-                .from_bytes(pJson.asCString()).size() > 256)
-            {
-                err="String length exceeds limit for the " +
-                    fieldName +
-                    " field (the maximum value is 256)";
                 return false;
             }
             break;

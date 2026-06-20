@@ -15,6 +15,7 @@ int main()
         : 5555;
     std::cout << "[config] Listening on port " << listenPort << std::endl;
     drogon::app().addListener("0.0.0.0", listenPort);
+    //本地用../，云端用./
     drogon::app().loadConfigFile("./config.json");
 
     const char *envHost = std::getenv("DB_HOST");

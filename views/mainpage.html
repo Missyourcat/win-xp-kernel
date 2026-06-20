@@ -63,6 +63,7 @@ body {
 
 #container {
     flex: 1;
+    min-width: 0;
     display: flex;
     flex-direction: column;
 }
@@ -76,6 +77,20 @@ body {
     padding: 0 20px;
     border-bottom: 1px solid #e5e7eb;
     gap: 10px;
+}
+
+.menu-toggle {
+    display: none;
+    background: none;
+    border: none;
+    color: #111827;
+    font-size: 22px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+.menu-toggle:hover {
+    background: #f1f5f9;
 }
 
 .topbar-left {
@@ -103,6 +118,7 @@ body {
     flex-direction: column;
     gap: 16px;
     min-height: calc(100vh - 56px);
+    overflow-x: auto;
 }
 
 .card {
@@ -318,6 +334,52 @@ textarea { min-height: 90px; }
     color: #64748b;
     padding: 20px 0;
 }
+
+.cell-image {
+    max-width: 48px;
+    max-height: 48px;
+    border-radius: 6px;
+    object-fit: cover;
+    display: block;
+}
+
+.cell-svg {
+    max-width: 120px;
+    max-height: 48px;
+}
+
+.cell-svg svg {
+    width: auto;
+    height: 32px;
+}
+
+@media (max-width: 768px) {
+    body {
+        position: relative;
+    }
+    #sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        z-index: 1000;
+        transform: translateX(-100%);
+        transition: transform 0.25s ease;
+    }
+    #sidebar.open {
+        transform: translateX(0);
+    }
+    #sidebar.open + #container::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.35);
+        z-index: 999;
+    }
+    .menu-toggle {
+        display: inline-flex;
+    }
+}
 </style>
 </head>
 
@@ -329,6 +391,7 @@ textarea { min-height: 90px; }
 
 <div id="container">
     <div id="topbar">
+        <button class="menu-toggle" id="menuToggle" type="button">☰</button>
         <div class="topbar-left">
             <div class="user" id="username"></div>
             <div class="badge" id="role"></div>
@@ -542,6 +605,15 @@ async function loadTableSchema(table) {
     }
 }
 
+function isImageUrl(val) {
+    return /^(https?:\/\/|data:image\/|\/)/.test(val) &&
+           /\.(png|jpg|jpeg|gif|svg|webp|ico|bmp)(\?|$)/i.test(val);
+}
+
+function isSvgCode(val) {
+    return /^\s*<svg/i.test(val) || /^\s*<\?xml/i.test(val);
+}
+
 function renderTable(columns, rows) {
     if (!columns.length) {
         tableContainerEl.innerHTML = '<div class="empty-state">该数据库表没有字段或无需展示字段。</div>';
@@ -579,8 +651,22 @@ function renderTable(columns, rows) {
             const tr = document.createElement('tr');
             columns.forEach(col => {
                 const td = document.createElement('td');
-                td.textContent = row[col] === null || row[col] === undefined
-                    ? 'NULL' : String(row[col]);
+                const val = row[col];
+                if (val === null || val === undefined) {
+                    td.textContent = 'NULL';
+                } else if (col === 'user_icon' && isImageUrl(String(val))) {
+                    const img = document.createElement('img');
+                    img.src = String(val);
+                    img.className = 'cell-image';
+                    td.appendChild(img);
+                } else if (col === 'desktop_image' && isSvgCode(String(val))) {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'cell-svg';
+                    wrapper.innerHTML = String(val);
+                    td.appendChild(wrapper);
+                } else {
+                    td.textContent = String(val);
+                }
                 tr.appendChild(td);
             });
             const actionTd = document.createElement('td');
@@ -789,6 +875,18 @@ async function deleteRow(row) {
         showStatus('删除请求失败。', false);
     }
 }
+
+const menuToggle = document.getElementById('menuToggle');
+menuToggle.addEventListener('click', () => {
+    sidebarEl.classList.toggle('open');
+});
+document.addEventListener('click', (e) => {
+    if (sidebarEl.classList.contains('open') &&
+        !sidebarEl.contains(e.target) &&
+        e.target !== menuToggle) {
+        sidebarEl.classList.remove('open');
+    }
+});
 
 searchBtn.addEventListener('click', doSearch);
 searchInput.addEventListener('keyup', e => { if (e.key === 'Enter') doSearch(); });
