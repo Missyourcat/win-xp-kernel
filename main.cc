@@ -57,7 +57,8 @@ int main()
     });
 
     drogon::app().registerPreRoutingAdvice([](const drogon::HttpRequestPtr &req,
-                                               std::function<void(const drogon::HttpResponsePtr &)> &&callback) {
+                                                drogon::AdviceCallback &&acb,
+                                                drogon::AdviceChainCallback &&ccb) {
         if (req->getMethod() == drogon::Options) {
             auto resp = drogon::HttpResponse::newHttpResponse();
             resp->setStatusCode(drogon::k204NoContent);
@@ -65,10 +66,10 @@ int main()
             resp->addHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
             resp->addHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
             resp->addHeader("Access-Control-Max-Age", "86400");
-            callback(resp);
-            return true;
+            acb(resp);
+            return;
         }
-        return false;
+        ccb();
     });
 
     drogon::app().run();
