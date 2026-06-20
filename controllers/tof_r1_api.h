@@ -18,6 +18,7 @@ class api : public drogon::HttpController<api>
     ADD_METHOD_TO(api::getCategories, "/tof/r1/api/categories", Get);
     ADD_METHOD_TO(api::getFiles, "/tof/r1/api/files", Get);
     ADD_METHOD_TO(api::downloadFile, "/tof/r1/api/file/download", Get);
+    ADD_METHOD_TO(api::getSystemInfo, "/tof/r1/api/system/info", Get);
     METHOD_LIST_END
 
     void registerUser(const HttpRequestPtr& req, std::function<void (const HttpResponsePtr &)> &&callback) const;
@@ -26,6 +27,7 @@ class api : public drogon::HttpController<api>
     void getCategories(const HttpRequestPtr& req, std::function<void (const HttpResponsePtr &)> &&callback) const;
     void getFiles(const HttpRequestPtr& req, std::function<void (const HttpResponsePtr &)> &&callback) const;
     void downloadFile(const HttpRequestPtr& req, std::function<void (const HttpResponsePtr &)> &&callback) const;
+    void getSystemInfo(const HttpRequestPtr& req, std::function<void (const HttpResponsePtr &)> &&callback) const;
 };
 }
 }

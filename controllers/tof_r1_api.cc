@@ -2,8 +2,13 @@
 #include <iostream>
 #include <sstream>
 #include <iomanip>
+#include <fstream>
 #include <openssl/sha.h>
 #include <jwt-cpp/jwt.h>
+#include <sys/utsname.h>
+#include <ifaddrs.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 #include "models/WinUser.h"
 #include "models/DesktopIcon.h"
 #include "models/Category.h"
@@ -393,8 +398,101 @@ void api::downloadFile(
         auto pos = filename.rfind('/');
         if (pos != std::string::npos)
             filename = filename.substr(pos + 1);
-        resp->addHeader("Content-Disposition", "attachment; filename=/" + filename + "/");
+        resp->addHeader("Content-Disposition", "attachment; filename=" + filename);
         callback(resp);
+    }
+    catch (const std::exception &e)
+    {
+        json_response(callback, 500, e.what());
+    }
+}
+
+void api::getSystemInfo(
+    const HttpRequestPtr& req,
+    std::function<void (const HttpResponsePtr &)> &&callback
+) const
+{
+    try
+    {
+        Json::Value data;
+
+        struct utsname uts;
+        if (uname(&uts) == 0)
+        {
+            data["os_name"] = uts.sysname;
+            data["os_release"] = uts.release;
+            data["os_version"] = uts.version;
+            data["machine"] = uts.machine;
+            data["hostname"] = uts.nodename;
+        }
+
+        std::ifstream cpuinfo("/proc/cpuinfo");
+        if (cpuinfo.is_open())
+        {
+            std::string line;
+            int processorCount = 0;
+            std::string modelName;
+            while (std::getline(cpuinfo, line))
+            {
+                if (line.rfind("processor", 0) == 0) processorCount++;
+                if (line.rfind("model name", 0) == 0)
+                {
+                    auto colon = line.find(':');
+                    if (colon != std::string::npos)
+                        modelName = line.substr(colon + 2);
+                }
+            }
+            data["cpu_count"] = processorCount;
+            data["cpu_model"] = modelName;
+        }
+
+        std::ifstream meminfo("/proc/meminfo");
+        if (meminfo.is_open())
+        {
+            std::string line;
+            while (std::getline(meminfo, line))
+            {
+                if (line.rfind("MemTotal:", 0) == 0)
+                {
+                    auto colon = line.find(':');
+                    auto valStr = line.substr(colon + 1);
+                    data["mem_total_kb"] = (Json::Int64)std::stoll(valStr);
+                }
+                if (line.rfind("MemAvailable:", 0) == 0)
+                {
+                    auto colon = line.find(':');
+                    auto valStr = line.substr(colon + 1);
+                    data["mem_available_kb"] = (Json::Int64)std::stoll(valStr);
+                }
+            }
+        }
+
+        struct ifaddrs *ifaddr, *ifa;
+        if (getifaddrs(&ifaddr) == 0)
+        {
+            Json::Value ipList(Json::arrayValue);
+            for (ifa = ifaddr; ifa != nullptr; ifa = ifa->ifa_next)
+            {
+                if (!ifa->ifa_addr || ifa->ifa_addr->sa_family != AF_INET)
+                    continue;
+                char ip[INET_ADDRSTRLEN];
+                auto sin = (struct sockaddr_in*)ifa->ifa_addr;
+                inet_ntop(AF_INET, &sin->sin_addr, ip, sizeof(ip));
+                if (std::string(ip) != "127.0.0.1")
+                {
+                    Json::Value iface;
+                    iface["name"] = ifa->ifa_name;
+                    iface["ip"] = ip;
+                    ipList.append(iface);
+                }
+            }
+            freeifaddrs(ifaddr);
+            data["ip_addresses"] = ipList;
+        }
+
+        Json::Value extra;
+        extra["data"] = data;
+        json_response(callback, 200, "ok", extra);
     }
     catch (const std::exception &e)
     {
