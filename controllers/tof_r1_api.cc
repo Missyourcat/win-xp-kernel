@@ -490,6 +490,8 @@ void api::getSystemInfo(
             data["ip_addresses"] = ipList;
         }
 
+        data["client_ip"] = req->getPeerAddr().toIp();
+
         Json::Value extra;
         extra["data"] = data;
         json_response(callback, 200, "ok", extra);
