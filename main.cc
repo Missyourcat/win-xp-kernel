@@ -49,6 +49,28 @@ int main()
 
     drogon::app().addDbClient(mysqlCfg);
 
+    drogon::app().registerPostHandlingAdvice([](const drogon::HttpRequestPtr &req,
+                                                 const drogon::HttpResponsePtr &resp) {
+        resp->addHeader("Access-Control-Allow-Origin", "*");
+        resp->addHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+        resp->addHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+    });
+
+    drogon::app().registerPreRoutingAdvice([](const drogon::HttpRequestPtr &req,
+                                               std::function<void(const drogon::HttpResponsePtr &)> &&callback) {
+        if (req->getMethod() == drogon::Options) {
+            auto resp = drogon::HttpResponse::newHttpResponse();
+            resp->setStatusCode(drogon::k204NoContent);
+            resp->addHeader("Access-Control-Allow-Origin", "*");
+            resp->addHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+            resp->addHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+            resp->addHeader("Access-Control-Max-Age", "86400");
+            callback(resp);
+            return true;
+        }
+        return false;
+    });
+
     drogon::app().run();
     return 0;
 }
