@@ -262,6 +262,10 @@ th, td {
     text-align: left;
     font-size: 13px;
     color: #334155;
+    max-width: 300px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 th {
@@ -487,6 +491,17 @@ function clearStatus() {
 }
 
 function setSidebarTables(tables) {
+    const contentGroup = document.createElement('div');
+    contentGroup.className = 'group-title';
+    contentGroup.textContent = 'CONTENT';
+    sidebarEl.appendChild(contentGroup);
+
+    const articleItem = document.createElement('div');
+    articleItem.className = 'menu-item';
+    articleItem.textContent = '▸ Article Category';
+    articleItem.onclick = () => { window.location.href = '/super/r1/MainP/article_editor'; };
+    sidebarEl.appendChild(articleItem);
+
     const databaseGroup = document.createElement('div');
     databaseGroup.className = 'group-title';
     databaseGroup.textContent = 'DATABASE';
