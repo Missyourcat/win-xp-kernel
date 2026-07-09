@@ -333,7 +333,7 @@ imageFileInput.onchange=async function(){
  const fd=new FormData();fd.append('file',file);
  try{
   insertImageBtn.disabled=true;insertImageBtn.textContent='⏳';
-  const r=await fetch('/super/r1/MainP/api/articles/'+currentArticleId+'/image',{method:'POST',credentials:'include',body:fd});
+  const r=await fetch('/tof/r1/api/admin/articles/'+currentArticleId+'/image',{method:'POST',credentials:'include',body:fd});
   const j=await r.json();
   if(j.code===200){
    const url=j.data.url,name=j.data.image_name;
@@ -353,7 +353,7 @@ imageFileInput.onchange=async function(){
 galleryBtn.onclick=async function(){
  if(!currentArticleId){showMsg('请先保存文章',true);return}
  try{
-  const r=await fetch('/super/r1/MainP/api/articles/'+currentArticleId+'/images',{credentials:'include'});
+  const r=await fetch('/tof/r1/api/admin/articles/'+currentArticleId+'/images',{credentials:'include'});
   const j=await r.json();
   if(j.code!==200){showMsg('加载图片失败',true);return}
   galleryImages=j.data||[];
@@ -415,7 +415,7 @@ async function loadArticle(id){
   clearEditor();return
  }
  try{
-  const r=await fetch('/super/r1/MainP/api/articles/'+id,{credentials:'include'});
+  const r=await fetch('/tof/r1/api/admin/articles/'+id,{credentials:'include'});
   const j=await r.json();
   if(j.code!==200){showMsg(j.msg||'加载失败',true);return}
   const d=j.data;
@@ -433,8 +433,8 @@ async function saveArticle(){
  const p={title:articleTitle.value.trim(),summary:articleSummary.value.trim(),category_id:parseInt(categorySelect.value)||0,keywords:keywords,content_md:mdEditor.value,status:currentStatus};
  try{
   let r;
-  if(currentArticleId)r=await fetch('/super/r1/MainP/api/articles/'+currentArticleId,{method:'PUT',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(p)});
-  else r=await fetch('/super/r1/MainP/api/articles',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(p)});
+  if(currentArticleId)r=await fetch('/tof/r1/api/admin/articles/'+currentArticleId,{method:'PUT',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(p)});
+  else r=await fetch('/tof/r1/api/admin/articles',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(p)});
   const j=await r.json();
   if(j.code===200){
    if(!currentArticleId&&j.insertId)currentArticleId=String(j.insertId);
@@ -449,7 +449,7 @@ deleteArticleBtn.onclick=async function(){
  if(!currentArticleId){showMsg('请先选择文章',true);return}
  if(!confirm('确认删除？'))return;
  try{
-  const r=await fetch('/super/r1/MainP/api/articles/'+currentArticleId,{method:'DELETE',credentials:'include'});
+  const r=await fetch('/tof/r1/api/admin/articles/'+currentArticleId,{method:'DELETE',credentials:'include'});
   const j=await r.json();
   if(j.code===200){showMsg('删除成功');localStorage.removeItem(CACHE_PREFIX+currentArticleId);clearEditor();await loadArticleList()}
   else showMsg(j.msg||'删除失败',true);
@@ -458,7 +458,7 @@ deleteArticleBtn.onclick=async function(){
 
 async function loadArticleList(){
  try{
-  const r=await fetch('/super/r1/MainP/api/articles',{credentials:'include'});const j=await r.json();
+  const r=await fetch('/tof/r1/api/admin/articles',{credentials:'include'});const j=await r.json();
   if(j.code!==200)return;
   articles=j.data||[];
   articleSelect.innerHTML='<option value="">-- 新建文章 --</option>';
@@ -476,7 +476,7 @@ refreshListBtn.onclick=loadArticleList;
 
 async function loadCategories(){
  try{
-  const r=await fetch('/super/r1/MainP/api/categories',{credentials:'include'});const j=await r.json();
+  const r=await fetch('/tof/r1/api/article_categories',{credentials:'include'});const j=await r.json();
   if(j.code!==200)return;
   categories=j.data||[];
   categorySelect.innerHTML='<option value="0">-- 选择分类 --</option>';
@@ -485,11 +485,7 @@ async function loadCategories(){
 }
 
 async function initPage(){
- try{
-  const r=await fetch('/super/r1/MainP/king?json=1',{headers:{'Accept':'application/json'},credentials:'include'});
-  if(!r.ok||!r.headers.get('content-type')?.includes('application/json')){window.location.href='/super/r1/LoginP/admin_in';return}
- }catch(e){window.location.href='/super/r1/LoginP/admin_in';return}
- await Promise.all([loadCategories(),loadArticleList()]);renderPreview(mdEditor.value);
+  await Promise.all([loadCategories(),loadArticleList()]);renderPreview(mdEditor.value);
 }
 
 window.addEventListener('beforeunload',function(e){if(hasUnsaved){e.preventDefault();e.returnValue=''}});

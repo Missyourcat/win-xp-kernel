@@ -11,6 +11,8 @@
 #include "models/DesktopIcon.h"
 #include "models/Category.h"
 #include "models/FileResource.h"
+#include "models/ArticleCategory.h"
+#include "models/ArticleMd.h"
 
 static std::string url_decode(const std::string &src)
 {
@@ -42,6 +44,7 @@ static std::string url_decode(const std::string &src)
 }
 
 using namespace tof::r1;
+using namespace drogon_model::win_xp_db;
 
 static std::string get_jwt_secret()
 {
@@ -482,4 +485,594 @@ void api::getSystemInfo(
     {
         json_response(callback, 500, e.what());
     }
+}
+
+// ============ 公开文章浏览接口 ============
+
+void api::getArticleCategories(
+    const HttpRequestPtr& req,
+    std::function<void (const HttpResponsePtr &)> &&callback
+) const
+{
+    try
+    {
+        auto db = drogon::app().getDbClient();
+        drogon::orm::Mapper<ArticleCategory> mapper(db);
+        mapper.findBy(
+            drogon::orm::Criteria(
+                ArticleCategory::Cols::_id,
+                drogon::orm::CompareOperator::GT,
+                0
+            ),
+            [callback](const std::vector<ArticleCategory> &cats)
+            {
+                Json::Value list(Json::arrayValue);
+                for (const auto &c : cats)
+                {
+                    Json::Value item;
+                    item["id"] = c.getValueOfId();
+                    item["name"] = c.getValueOfName();
+                    if (c.getDescription())
+                        item["description"] = c.getValueOfDescription();
+                    list.append(item);
+                }
+                Json::Value extra;
+                extra["data"] = list;
+                json_response(callback, 200, "ok", extra);
+            },
+            [callback](const drogon::orm::DrogonDbException &e)
+            {
+                json_response(callback, 500, "数据库错误: " + std::string(e.base().what()));
+            }
+        );
+    }
+    catch (const std::exception &e)
+    {
+        json_response(callback, 500, e.what());
+    }
+}
+
+void api::getArticles(
+    const HttpRequestPtr& req,
+    std::function<void (const HttpResponsePtr &)> &&callback
+) const
+{
+    try
+    {
+        auto db = drogon::app().getDbClient();
+        auto query = req->getParameters();
+        auto catIt = query.find("category_id");
+
+        drogon::orm::Mapper<ArticleMd> mapper(db);
+        auto criteria = drogon::orm::Criteria(
+            ArticleMd::Cols::_status,
+            drogon::orm::CompareOperator::EQ,
+            1
+        );
+        if (catIt != query.end())
+        {
+            int64_t catId = std::stoll(catIt->second);
+            criteria = criteria && drogon::orm::Criteria(
+                ArticleMd::Cols::_category_id,
+                drogon::orm::CompareOperator::EQ,
+                catId
+            );
+        }
+
+        mapper.findBy(
+            criteria,
+            [callback](const std::vector<ArticleMd> &articles)
+            {
+                Json::Value list(Json::arrayValue);
+                for (const auto &a : articles)
+                {
+                    Json::Value item;
+                    item["id"] = a.getValueOfId();
+                    item["category_id"] = a.getValueOfCategoryId();
+                    item["title"] = a.getValueOfTitle();
+                    if (a.getSummary())
+                        item["summary"] = a.getValueOfSummary();
+                    item["view_count"] = (Json::Int64)a.getValueOfViewCount();
+                    if (a.getCreatedAt())
+                        item["created_at"] = a.getValueOfCreatedAt().toDbStringLocal();
+                    if (a.getUpdatedAt())
+                        item["updated_at"] = a.getValueOfUpdatedAt().toDbStringLocal();
+
+                    auto kw = a.getKeywords();
+                    if (kw)
+                    {
+                        Json::Value karr(Json::arrayValue);
+                        Json::Reader reader;
+                        Json::Value parsed;
+                        if (reader.parse(*kw, parsed) && parsed.isArray())
+                            item["keywords"] = parsed;
+                        else
+                            item["keywords"] = Json::arrayValue;
+                    }
+                    else
+                    {
+                        item["keywords"] = Json::arrayValue;
+                    }
+
+                    list.append(item);
+                }
+                Json::Value extra;
+                extra["data"] = list;
+                json_response(callback, 200, "ok", extra);
+            },
+            [callback](const drogon::orm::DrogonDbException &e)
+            {
+                json_response(callback, 500, "数据库错误: " + std::string(e.base().what()));
+            }
+        );
+    }
+    catch (const std::exception &e)
+    {
+        json_response(callback, 500, e.what());
+    }
+}
+
+void api::getArticle(
+    const HttpRequestPtr& req,
+    std::function<void (const HttpResponsePtr &)> &&callback,
+    std::string id
+) const
+{
+    try
+    {
+        auto db = drogon::app().getDbClient();
+        drogon::orm::Mapper<ArticleMd> mapper(db);
+        mapper.findOne(
+            drogon::orm::Criteria(
+                ArticleMd::Cols::_id,
+                drogon::orm::CompareOperator::EQ,
+                (int64_t)std::stoll(id)
+            ),
+            [callback](const ArticleMd &a)
+            {
+                Json::Value item;
+                item["id"] = a.getValueOfId();
+                item["category_id"] = a.getValueOfCategoryId();
+                item["title"] = a.getValueOfTitle();
+                if (a.getSummary())
+                    item["summary"] = a.getValueOfSummary();
+                if (a.getContentMd())
+                    item["content_md"] = a.getValueOfContentMd();
+                item["view_count"] = (Json::Int64)a.getValueOfViewCount();
+                if (a.getCreatedAt())
+                    item["created_at"] = a.getValueOfCreatedAt().toDbStringLocal();
+                if (a.getUpdatedAt())
+                    item["updated_at"] = a.getValueOfUpdatedAt().toDbStringLocal();
+
+                auto kw = a.getKeywords();
+                if (kw)
+                {
+                    Json::Value karr(Json::arrayValue);
+                    Json::Reader reader;
+                    Json::Value parsed;
+                    if (reader.parse(*kw, parsed) && parsed.isArray())
+                        item["keywords"] = parsed;
+                    else
+                        item["keywords"] = Json::arrayValue;
+                }
+                else
+                {
+                    item["keywords"] = Json::arrayValue;
+                }
+
+                Json::Value extra;
+                extra["data"] = item;
+                json_response(callback, 200, "ok", extra);
+            },
+            [callback](const drogon::orm::DrogonDbException &e)
+            {
+                json_response(callback, 500, "未找到文章");
+            }
+        );
+    }
+    catch (const std::exception &e)
+    {
+        json_response(callback, 500, e.what());
+    }
+}
+
+void api::incrementView(
+    const HttpRequestPtr& req,
+    std::function<void (const HttpResponsePtr &)> &&callback,
+    std::string id
+) const
+{
+    try
+    {
+        auto cb = callback;
+        auto db = drogon::app().getDbClient();
+        drogon::orm::Mapper<ArticleMd> mapper(db);
+        mapper.findOne(
+            drogon::orm::Criteria(
+                ArticleMd::Cols::_id,
+                drogon::orm::CompareOperator::EQ,
+                (int64_t)std::stoll(id)
+            ),
+            [cb, db](const ArticleMd &article)
+            {
+                drogon::orm::Mapper<ArticleMd> mapper(db);
+                auto updated = article;
+                updated.setViewCount(article.getValueOfViewCount() + 1);
+                mapper.update(updated,
+                    [cb]([[maybe_unused]] const size_t count)
+                    {
+                        json_response(cb, 200, "ok");
+                    },
+                    [cb](const drogon::orm::DrogonDbException &e)
+                    {
+                        json_response(cb, 500, "更新失败: " + std::string(e.base().what()));
+                    }
+                );
+            },
+            [cb](const drogon::orm::DrogonDbException &e)
+            {
+                json_response(cb, 500, "未找到文章");
+            }
+        );
+    }
+    catch (const std::exception &e)
+    {
+        json_response(callback, 500, e.what());
+    }
+}
+
+void api::getArticleImage(
+    const HttpRequestPtr& req,
+    std::function<void (const HttpResponsePtr &)> &&callback,
+    std::string imageId
+) const
+{
+    auto db = drogon::app().getDbClient();
+    db->execSqlAsync(
+        "SELECT image_data, mime_type FROM article_md_image WHERE id = ?",
+        [callback](const drogon::orm::Result &r)
+        {
+            if (r.empty())
+            {
+                auto resp = HttpResponse::newHttpResponse();
+                resp->setStatusCode(k404NotFound);
+                resp->setBody("图片不存在");
+                callback(resp);
+                return;
+            }
+            const auto &row = r[0];
+            auto mime = row["mime_type"].as<std::string>();
+            auto blob = row["image_data"].as<std::string>();
+            auto resp = HttpResponse::newHttpResponse();
+            resp->setContentTypeString(mime);
+            resp->setBody(blob);
+            callback(resp);
+        },
+        [callback](const drogon::orm::DrogonDbException &e)
+        {
+            auto resp = HttpResponse::newHttpResponse();
+            resp->setStatusCode(k500InternalServerError);
+            resp->setBody(e.base().what());
+            callback(resp);
+        },
+        imageId);
+}
+
+// ============ 后台文章管理接口 ============
+
+void api::getAdminArticles(
+    const HttpRequestPtr& req,
+    std::function<void (const HttpResponsePtr &)> &&callback
+) const
+{
+    auto db = drogon::app().getDbClient();
+    std::string sql =
+        "SELECT a.id, a.title, a.summary, a.status, a.view_count, "
+        "a.created_at, a.updated_at, a.category_id, c.name AS category_name "
+        "FROM article_md a LEFT JOIN article_category c ON a.category_id = c.id "
+        "ORDER BY a.id DESC LIMIT 200";
+
+    db->execSqlAsync(
+        sql,
+        [callback](const drogon::orm::Result &r)
+        {
+            Json::Value ret;
+            ret["code"] = 200;
+            Json::Value data(Json::arrayValue);
+            for (const auto &row : r)
+            {
+                Json::Value item;
+                item["id"] = row["id"].as<int>();
+                item["category_id"] = row["category_id"].isNull() ? 0 : row["category_id"].as<int>();
+                item["title"] = row["title"].as<std::string>();
+                item["summary"] = row["summary"].isNull() ? "" : row["summary"].as<std::string>();
+                item["status"] = row["status"].as<int>();
+                item["view_count"] = row["view_count"].as<int>();
+                item["category_name"] = row["category_name"].isNull() ? "" : row["category_name"].as<std::string>();
+                item["created_at"] = row["created_at"].as<std::string>();
+                item["updated_at"] = row["updated_at"].as<std::string>();
+                data.append(item);
+            }
+            ret["data"] = data;
+            callback(HttpResponse::newHttpJsonResponse(ret));
+        },
+        [callback](const drogon::orm::DrogonDbException &e)
+        {
+            Json::Value ret;
+            ret["code"] = 500;
+            ret["msg"] = e.base().what();
+            callback(HttpResponse::newHttpJsonResponse(ret));
+        });
+}
+
+void api::getAdminArticle(
+    const HttpRequestPtr& req,
+    std::function<void (const HttpResponsePtr &)> &&callback,
+    std::string id
+) const
+{
+    auto db = drogon::app().getDbClient();
+    db->execSqlAsync(
+        "SELECT a.*, c.name AS category_name FROM article_md a "
+        "LEFT JOIN article_category c ON a.category_id = c.id WHERE a.id = ?",
+        [callback](const drogon::orm::Result &r)
+        {
+            if (r.empty())
+            {
+                Json::Value ret;
+                ret["code"] = 404;
+                ret["msg"] = "文章不存在";
+                callback(HttpResponse::newHttpJsonResponse(ret));
+                return;
+            }
+            const auto &row = r[0];
+            Json::Value ret;
+            ret["code"] = 200;
+            ret["data"]["id"] = row["id"].as<int>();
+            ret["data"]["category_id"] = row["category_id"].isNull() ? 0 : row["category_id"].as<int>();
+            ret["data"]["title"] = row["title"].as<std::string>();
+            ret["data"]["summary"] = row["summary"].isNull() ? "" : row["summary"].as<std::string>();
+            ret["data"]["content_md"] = row["content_md"].as<std::string>();
+            ret["data"]["status"] = row["status"].as<int>();
+            ret["data"]["view_count"] = row["view_count"].as<int>();
+            ret["data"]["category_name"] = row["category_name"].isNull() ? "" : row["category_name"].as<std::string>();
+            ret["data"]["created_at"] = row["created_at"].as<std::string>();
+            ret["data"]["updated_at"] = row["updated_at"].as<std::string>();
+            auto keywordsStr = row["keywords"].isNull()
+                ? "" : row["keywords"].as<std::string>();
+            if (!keywordsStr.empty())
+            {
+                Json::Value karr(Json::arrayValue);
+                Json::Reader reader;
+                Json::Value parsed;
+                if (reader.parse(keywordsStr, parsed) && parsed.isArray())
+                    ret["data"]["keywords"] = parsed;
+                else
+                    ret["data"]["keywords"] = Json::arrayValue;
+            }
+            else
+            {
+                ret["data"]["keywords"] = Json::arrayValue;
+            }
+            callback(HttpResponse::newHttpJsonResponse(ret));
+        },
+        [callback](const drogon::orm::DrogonDbException &e)
+        {
+            Json::Value ret;
+            ret["code"] = 500;
+            ret["msg"] = e.base().what();
+            callback(HttpResponse::newHttpJsonResponse(ret));
+        },
+        id);
+}
+
+void api::createArticle(
+    const HttpRequestPtr& req,
+    std::function<void (const HttpResponsePtr &)> &&callback
+) const
+{
+    auto json = req->getJsonObject();
+    if (!json)
+    {
+        json_response(callback, 400, "请求体不能为空");
+        return;
+    }
+    if ((*json)["title"].asString().empty())
+    {
+        json_response(callback, 400, "标题不能为空");
+        return;
+    }
+    int categoryId = (*json)["category_id"].asInt();
+    std::string title = (*json)["title"].asString();
+    std::string summary = (*json)["summary"].asString();
+    std::string keywords = Json::FastWriter().write((*json)["keywords"]);
+    std::string contentMd = (*json)["content_md"].asString();
+    int status = (*json)["status"].asInt();
+    auto db = drogon::app().getDbClient();
+    db->execSqlAsync(
+        "INSERT INTO article_md (category_id, title, summary, keywords, "
+        "content_md, status) VALUES (?, ?, ?, ?, ?, ?)",
+        [callback](const drogon::orm::Result &r)
+        {
+            Json::Value ret;
+            ret["code"] = 200;
+            ret["msg"] = "创建成功";
+            ret["insertId"] = static_cast<Json::Int64>(r.insertId());
+            callback(HttpResponse::newHttpJsonResponse(ret));
+        },
+        [callback](const drogon::orm::DrogonDbException &e)
+        {
+            Json::Value ret;
+            ret["code"] = 500;
+            ret["msg"] = e.base().what();
+            callback(HttpResponse::newHttpJsonResponse(ret));
+        },
+        categoryId, title, summary, keywords, contentMd, status);
+}
+
+void api::updateArticle(
+    const HttpRequestPtr& req,
+    std::function<void (const HttpResponsePtr &)> &&callback,
+    std::string id
+) const
+{
+    auto json = req->getJsonObject();
+    if (!json)
+    {
+        json_response(callback, 400, "请求体不能为空");
+        return;
+    }
+    int categoryId = (*json)["category_id"].asInt();
+    std::string title = (*json)["title"].asString();
+    std::string summary = (*json)["summary"].asString();
+    std::string keywords = Json::FastWriter().write((*json)["keywords"]);
+    std::string contentMd = (*json)["content_md"].asString();
+    int status = (*json)["status"].asInt();
+    auto db = drogon::app().getDbClient();
+    db->execSqlAsync(
+        "UPDATE article_md SET category_id=?, title=?, summary=?, keywords=?, "
+        "content_md=?, status=? WHERE id=?",
+        [callback](const drogon::orm::Result &r)
+        {
+            Json::Value ret;
+            ret["code"] = 200;
+            ret["msg"] = "更新成功";
+            ret["affectedRows"] = static_cast<Json::Int64>(r.affectedRows());
+            callback(HttpResponse::newHttpJsonResponse(ret));
+        },
+        [callback](const drogon::orm::DrogonDbException &e)
+        {
+            Json::Value ret;
+            ret["code"] = 500;
+            ret["msg"] = e.base().what();
+            callback(HttpResponse::newHttpJsonResponse(ret));
+        },
+        categoryId, title, summary, keywords, contentMd, status, id);
+}
+
+void api::deleteArticle(
+    const HttpRequestPtr& req,
+    std::function<void (const HttpResponsePtr &)> &&callback,
+    std::string id
+) const
+{
+    auto db = drogon::app().getDbClient();
+    db->execSqlAsync(
+        "DELETE FROM article_md WHERE id=?",
+        [callback](const drogon::orm::Result &r)
+        {
+            Json::Value ret;
+            ret["code"] = 200;
+            ret["msg"] = "删除成功";
+            ret["affectedRows"] = static_cast<Json::Int64>(r.affectedRows());
+            callback(HttpResponse::newHttpJsonResponse(ret));
+        },
+        [callback](const drogon::orm::DrogonDbException &e)
+        {
+            Json::Value ret;
+            ret["code"] = 500;
+            ret["msg"] = e.base().what();
+            callback(HttpResponse::newHttpJsonResponse(ret));
+        },
+        id);
+}
+
+void api::uploadArticleImage(
+    const HttpRequestPtr& req,
+    std::function<void (const HttpResponsePtr &)> &&callback,
+    std::string articleId
+) const
+{
+    MultiPartParser parser;
+    if (parser.parse(req) != 0)
+    {
+        json_response(callback, 400, "解析上传数据失败");
+        return;
+    }
+    const auto &files = parser.getFiles();
+    if (files.empty())
+    {
+        json_response(callback, 400, "未找到上传文件");
+        return;
+    }
+    const auto &file = files[0];
+    std::string fileName = file.getFileName();
+    auto content = file.fileContent();
+    std::string fileData(content.data(), content.size());
+    auto contentType = file.getContentType();
+    std::string mimeStr;
+    if (contentType == drogon::CT_IMAGE_PNG)
+        mimeStr = "image/png";
+    else if (contentType == drogon::CT_IMAGE_JPG)
+        mimeStr = "image/jpeg";
+    else if (contentType == drogon::CT_IMAGE_GIF)
+        mimeStr = "image/gif";
+    else if (contentType == drogon::CT_IMAGE_WEBP)
+        mimeStr = "image/webp";
+    else if (contentType == drogon::CT_IMAGE_BMP)
+        mimeStr = "image/bmp";
+    else
+        mimeStr = "application/octet-stream";
+    auto db = drogon::app().getDbClient();
+    db->execSqlAsync(
+        "INSERT INTO article_md_image (article_id, image_name, mime_type, image_data) "
+        "VALUES (?, ?, ?, ?)",
+        [callback, fileName](const drogon::orm::Result &r)
+        {
+            auto insertId = r.insertId();
+            std::string url = "/tof/r1/api/article_images/" +
+                              std::to_string(insertId);
+            Json::Value ret;
+            ret["code"] = 200;
+            ret["msg"] = "上传成功";
+            ret["data"]["id"] = static_cast<Json::Int64>(insertId);
+            ret["data"]["image_name"] = fileName;
+            ret["data"]["url"] = url;
+            callback(HttpResponse::newHttpJsonResponse(ret));
+        },
+        [callback](const drogon::orm::DrogonDbException &e)
+        {
+            Json::Value ret;
+            ret["code"] = 500;
+            ret["msg"] = e.base().what();
+            callback(HttpResponse::newHttpJsonResponse(ret));
+        },
+        articleId, fileName, mimeStr, fileData);
+}
+
+void api::getArticleImages(
+    const HttpRequestPtr& req,
+    std::function<void (const HttpResponsePtr &)> &&callback,
+    std::string articleId
+) const
+{
+    auto db = drogon::app().getDbClient();
+    db->execSqlAsync(
+        "SELECT id, image_name, mime_type FROM article_md_image WHERE article_id = ? ORDER BY id",
+        [callback](const drogon::orm::Result &r)
+        {
+            Json::Value ret;
+            ret["code"] = 200;
+            Json::Value data(Json::arrayValue);
+            for (const auto &row : r)
+            {
+                Json::Value item;
+                auto id = row["id"].as<int>();
+                item["id"] = id;
+                item["image_name"] = row["image_name"].as<std::string>();
+                item["mime_type"] = row["mime_type"].as<std::string>();
+                item["url"] = "/tof/r1/api/article_images/" + std::to_string(id);
+                data.append(item);
+            }
+            ret["data"] = data;
+            callback(HttpResponse::newHttpJsonResponse(ret));
+        },
+        [callback](const drogon::orm::DrogonDbException &e)
+        {
+            Json::Value ret;
+            ret["code"] = 500;
+            ret["msg"] = e.base().what();
+            callback(HttpResponse::newHttpJsonResponse(ret));
+        },
+        articleId);
 }
